@@ -33,8 +33,6 @@ process* process_list = NULL;
 
 //functions declaration to prevent compilation warning:
 void updateProcessList(process **process_list);
-void updateProcessStatus(process* process_list, int pid, int status);
-void freeProcessList(process* process_list);
 
 
 
