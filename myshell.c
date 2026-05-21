@@ -30,6 +30,14 @@ typedef struct process {
 int debug = 0;
 process* process_list = NULL;
 
+
+//functions declaration to prevent compilation warning:
+void updateProcessList(process **process_list);
+void updateProcessStatus(process* process_list, int pid, int status);
+void freeProcessList(process* process_list);
+
+
+
 //char* and not cmdLine* to prevent memory leaks:
 /*
 we add child(only child!) to processlist of ptrs, so if history will be ptr too we can have dangling ptr,
@@ -38,7 +46,7 @@ random note: father pid is shell and never in history or processes list.
 */
 char* history[HISTLEN];
 //part4 LABC
-int historycount = 0;
+int historyCount = 0;
 int historyNewest = 0;
 int historyOldest = 0;
 
@@ -204,7 +212,7 @@ void printHistory() {
 //helper function for !! command
 //gets command number in history list and return the unparsed command
 const char* getHistoryCommand(int n) {
-    if (n < 1 || n > history_count) {
+    if (n < 1 || n > historyCount) {
         return NULL;
     }
     int idx = (historyOldest + n - 1) % HISTLEN;
@@ -479,8 +487,8 @@ int main(int argc, char **argv){
                 freeCmdLines(line);
                 //process list is global var
                 freeProcessList(process_list);
-                for (int i = 0; i < history_count; i++) {
-                    free(history[(history_oldest + i) % HISTLEN]);
+                for (int i = 0; i < historyCount; i++) {
+                    free(history[(historyOldest + i) % HISTLEN]);
                 }
                 exit(0);
             }
