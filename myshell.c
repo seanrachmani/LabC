@@ -99,6 +99,7 @@ void printProcessList(process** process_list) {
                 prev->next = curr->next;
             }
             curr = curr->next;
+            delete->cmd->next = NULL;
             freeCmdLines(delete->cmd);
             free(delete);
         } 
@@ -115,6 +116,9 @@ void freeProcessList(process* process_list) {
     while (curr != NULL) {
         process* delete = curr;
         curr = curr->next;
+        if (delete->cmd != NULL) {
+            delete->cmd->next = NULL;
+        }
         freeCmdLines(delete->cmd);
         //we free what we malloc in addprocess:
         free(delete);

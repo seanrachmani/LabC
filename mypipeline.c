@@ -64,7 +64,7 @@ int main() {
     
     //father: 
     fprintf(stderr, "(parent_process>created process with id %d)\n", child2);
-    fprintf(stderr, "(parent_process>closing the rad end of the pipe...)\n");
+    fprintf(stderr, "(parent_process>closing the read end of the pipe...)\n");
     close(pipefd[0]);
     
     //wait(for who,no store info, 0 for the same process group id)

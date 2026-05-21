@@ -1,8 +1,8 @@
 #link
-all : myshell looper mypipe
+all : myshell looper mypipeline
 
-mypipe : mypipe.o
-	gcc -m32 -g -Wall -o mypipe mypipe.o
+mypipeline : mypipeline.o
+	gcc -m32 -g -Wall -o mypipeline mypipeline.o
 
 myshell : LineParser.o myshell.o
 	gcc -m32 -g -Wall -o myshell LineParser.o myshell.o
@@ -15,8 +15,8 @@ looper : looper.o
 myshell.o : myshell.c
 	gcc -m32 -g -Wall -c -o myshell.o myshell.c
 
-mypipe.o : mypipe.c
-	gcc -m32 -g -Wall -c -o mypipe.o mypipe.c
+mypipeline.o : mypipeline.c
+	gcc -m32 -g -Wall -c -o mypipeline.o mypipeline.c
 
 LineParser.o : LineParser.c
 	gcc -m32 -g -Wall -c -o LineParser.o LineParser.c	
@@ -25,4 +25,4 @@ looper.o : looper.c
 	gcc -m32 -g -Wall -c -o looper.o looper.c
 #clean
 clean :
-	rm -f *.o myshell looper mypipe
+	rm -f *.o myshell looper mypipeline
