@@ -50,20 +50,7 @@ void addProcess(process** process_list, cmdLine* cmd, pid_t pid) {
     *process_list = newProc;
 }
 
-void updateProcessStatus(process* process_list_ptr, int pid, int status) {
-    process* curr = process_list_ptr;
-    while (curr != NULL) {
-        if (curr->pid == pid) {
-            curr->status = status;
-            return;
-        }
-        curr = curr->next;
-    }
-}
-
 //print process list
-
-
 void printProcessList(process** process_list) {
     //labc3b addition
     updateProcessList(process_list);
@@ -85,17 +72,19 @@ void printProcessList(process** process_list) {
         }
         fprintf(stdout, "\n");
 
-        //LABC3b addition:
+        //LABC3b addition:go throght list find terminated procs and delete them
+        //if a proc was freshly terminated delte it after printing it 
         if (curr->status == TERMINATED) {
-            process* to_delete = curr;
-            if (prev == NULL) {
+            process* delete = curr;
+            if (prev == NULL) { //its the first node
                 *process_list = curr->next;
-            } else {
+            } 
+            else { //middle of list
                 prev->next = curr->next;
             }
             curr = curr->next;
-            freeCmdLines(to_delete->cmd);
-            free(to_delete);
+            freeCmdLines(delete->cmd);
+            free(delete);
         } 
         else {
             prev = curr;
@@ -104,16 +93,69 @@ void printProcessList(process** process_list) {
     }
 }
 
-void freeProcessList(process* process_list_ptr) {
-    process* curr = process_list_ptr;
+//free al memory allocated for list
+void freeProcessList(process* process_list) {
+    process* curr = process_list;
     while (curr != NULL) {
-        process* to_delete = curr;
+        process* delete = curr;
         curr = curr->next;
-        freeCmdLines(to_delete->cmd);
-        free(to_delete);
+        freeCmdLines(delete->cmd);
+        //we free what we malloc in addprocess:
+        free(delete);
     }
 }
 
+
+/*
+check if proc done for all process and update it to actual status
+waitpid Flags (The Instructions)
+WNOHANG ➔ With No Hang: Makes waitpid non-blocking; returns immediately if the child process is still running without freezing the shell.
+WUNTRACED ➔ Wait if Untraced: Tells waitpid to also report status if a child process was stopped/suspended (e.g., via SIGTSTP).
+WCONTINUED ➔ Wait if Continued: Tells waitpid to also report status if a stopped child process was resumed/woken up (e.g., via SIGCONT).
+WIF Macros (The Evaluation)
+WIFSTOPPED(status) ➔ Wait If Stopped: Returns true if the child process was temporarily suspended/stopped.
+WIFCONTINUED(status) ➔ Wait If Continued: Returns true if the child process was resumed and is running again.
+WIFEXITED(status) ➔ Wait If Exited: Returns true if the child process terminated normally (e.g., called exit or reached the end of main).
+WIFSIGNALED(status) ➔ Wait If Signaled: Returns true if the child process was forcefully killed by an external signal (e.g., SIGINT or SIGKILL).
+*/
+void updateProcessList(process **process_list) {
+    process* curr = *process_list;
+    while (curr != NULL) {
+        int status;
+        pid_t res = waitpid(curr->pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
+        if (res > 0) {
+            if (WIFSTOPPED(status)) {
+                curr->status = SUSPENDED;
+            } else if (WIFCONTINUED(status)) {
+                curr->status = RUNNING;
+            } else if (WIFEXITED(status) || WIFSIGNALED(status)) {
+                curr->status = TERMINATED;
+            }
+        //if he cant find it so it dies long time ago
+        } else if (res == -1) {
+            curr->status = TERMINATED;
+        }
+        curr = curr->next;
+    }
+}
+
+
+//find the process with pid in processlist anf chang its status to recieved status
+void updateProcessStatus(process* process_list, int pid, int status) {
+    process* curr = process_list;
+    while (curr != NULL) {
+        if (curr->pid == pid) {
+            curr->status = status;
+            return;
+        }
+        curr = curr->next;
+    }
+}
+
+
+
+
+//
 void addToHistory(const char* input) {
     if (history_count == HISTLEN) {
         free(history[history_oldest]);
