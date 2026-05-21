@@ -155,7 +155,7 @@ void updateProcessStatus(process* process_list, int pid, int status) {
 
 
 
-//
+//part4 LABC
 void addToHistory(const char* input) {
     if (history_count == HISTLEN) {
         free(history[history_oldest]);
@@ -434,6 +434,7 @@ int main(int argc, char **argv){
             char* commandName = line->arguments[0];
             if(strcmp(commandName,"quit") == 0){
                 freeCmdLines(line);
+                //process list is global var
                 freeProcessList(process_list);
                 for (int i = 0; i < history_count; i++) {
                     free(history[(history_oldest + i) % HISTLEN]);
@@ -456,6 +457,8 @@ int main(int argc, char **argv){
                 printProcessList(&process_list);
                 freeCmdLines(line);
             }
+            //end of lab c addition
+            //LAB2 code:
             else{
                 //task 2, shell commands:
                 //kill(pid,signal)
@@ -474,6 +477,7 @@ int main(int argc, char **argv){
                     }
                     else{
                         pid = atoi(stringPid);
+                        //LAB C ADiition: update status of process according to usr requiremnet
                         if(strcmp(commandName,"stop") == 0){
                             if(kill(pid,SIGTSTP) == 0) updateProcessStatus(process_list, pid, SUSPENDED);
                         }
@@ -484,6 +488,7 @@ int main(int argc, char **argv){
                             if(kill(pid,SIGINT) == 0) updateProcessStatus(process_list, pid, TERMINATED);
                         }
                         else if(strcmp(commandName,"nuke") == 0){
+                            //-1 bc acccording to man this is how linux can treat all group(negative num nc all pid are positive)
                             if(kill(pid*-1,SIGKILL) == 0) updateProcessStatus(process_list, pid, TERMINATED);
                         }
                     }
