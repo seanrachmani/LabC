@@ -29,10 +29,18 @@ typedef struct process {
 //global var:
 int debug = 0;
 process* process_list = NULL;
+
+//char* and not cmdLine* to prevent memory leaks:
+/*
+we add child(only child!) to processlist of ptrs, so if history will be ptr too we can have dangling ptr,
+also we need unparsed according to instructions so feels like its hint for char
+random note: father pid is shell and never in history or processes list. 
+*/
 char* history[HISTLEN];
-int history_count = 0;
-int history_newest = 0;
-int history_oldest = 0;
+//part4 LABC
+int historycount = 0;
+int historyNewest = 0;
+int historyOldest = 0;
 
 //LAB C part3.a
 /*
@@ -157,31 +165,49 @@ void updateProcessStatus(process* process_list, int pid, int status) {
 
 
 
-//part4 LABC
+//part4 LABC: helper functions:
+
+//add new cmd and delte the oldest from the beggining if ful
+//(then insert the new cmd to the end)
+//input is the unparsed command
 void addToHistory(const char* input) {
-    if (history_count == HISTLEN) {
-        free(history[history_oldest]);
-        history_oldest = (history_oldest + 1) % HISTLEN;
-    } else {
-        history_count++;
+    if (historyCount == HISTLEN) {
+        free(history[historyOldest]);
+        //ptr arithmetic
+        //modulo for circular queue
+        historyOldest = (historyOldest + 1) % HISTLEN;
+    } 
+    else {
+        historyCount++;
     }
-    history[history_newest] = strdup(input);
-    history_newest = (history_newest + 1) % HISTLEN;
+    //histroynewest if the first freeplace
+    /*strdu bc string is ptr and we get it(input) from main and we dont want memLeaks
+     so need to duplicate place for each  unparsed coomand. 
+     our current array cell now has ptr to new memoery of current string
+   */
+    history[historyNewest] = strdup(input);
+    historyNewest = (historyNewest + 1) % HISTLEN;
 }
 
+/*
+print the history list 
+(number of command line and the list and the appropriate command line), for all entries.
+*/
 void printHistory() {
-    int idx = history_oldest;
-    for (int i = 0; i < history_count; i++) {
+    int idx = historyOldest;
+    for (int i = 0; i < historyCount; i++) {
         fprintf(stdout, "%d %s\n", i + 1, history[idx]);
         idx = (idx + 1) % HISTLEN;
     }
 }
 
+//helper function for !! command
+//gets command number in history list and return the unparsed command
 const char* getHistoryCommand(int n) {
     if (n < 1 || n > history_count) {
         return NULL;
     }
-    int idx = (history_oldest + n - 1) % HISTLEN;
+    int idx = (historyOldest + n - 1) % HISTLEN;
     return history[idx];
 }
 
@@ -285,7 +311,7 @@ void execute(cmdLine* pCmdLine){
             waitpid(pid2, NULL, 0);
             updateProcessStatus(process_list, pid2, TERMINATED);
         }
-    } else {
+    } else { //nopipe
         const char* path = pCmdLine->arguments[0];
         pid_t pid;
         //code taken from lecture 2:
@@ -337,6 +363,7 @@ void execute(cmdLine* pCmdLine){
             _exit(1);
         }
         
+        //father adds son to processes
         addProcess(&process_list, pCmdLine, pid);
         
         if(debug){
@@ -401,32 +428,46 @@ int main(int argc, char **argv){
         fprintf(stdout,"current working directory is:%s\n",path);
         char input[2048];
         //read from user
+        //if ctrlF for eof brake the shell
         if (fgets(input,2048,stdin) == NULL) {
             break;
         }
-        
+        //delte whatever comes after \n in th input command
         input[strcspn(input, "\n")] = 0;
+        //if the user just enter witth no command
         if (strlen(input) == 0) {
             continue;
         }
 
+        //!!  !n 
+        //retrieve command(last / or with requested index and execute it)
+        //we dont put these commands in history(dont want endless loop)
         if (input[0] == '!') {
-            const char* hist_cmd = NULL;
+            //initialize NULL for prevent garbage initialize
+            const char* historyCmd = NULL;
             if (strcmp(input, "!!") == 0) {
-                hist_cmd = getHistoryCommand(history_count);
-            } else {
+                //the last one
+                historyCmd = getHistoryCommand(historyCount);
+            }
+
+            else { 
+                //atoi is asci to integer
                 int n = atoi(&input[1]);
-                hist_cmd = getHistoryCommand(n);
+                historyCmd = getHistoryCommand(n);
             }
             
-            if (hist_cmd == NULL) {
-                fprintf(stderr, "Event not found\n");
+            if (historyCmd == NULL) {
+                //out of rnage
+                fprintf(stderr, "Error: out of range\n");
                 continue;
             }
-            strcpy(input, hist_cmd);
-            fprintf(stdout, "%s\n", input);
+            //override !!/!n input with history command
+            strcpy(input, historyCmd);
+
+            fprintf(stdout, "the retrived cmd is: %s\n", input);
         }
 
+        //adding uonparsed command to history array
         addToHistory(input);
         
         //parse:
