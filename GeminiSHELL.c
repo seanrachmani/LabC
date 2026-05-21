@@ -13,13 +13,14 @@
 #define TERMINATED  -1
 #define RUNNING 1
 #define SUSPENDED 0
-#define HISTLEN 10
 
+
+//this is given:
 typedef struct process {
-    cmdLine* cmd;
+    cmdLine* cmd; //parsed cmdline
     pid_t pid;
     int status;
-    struct process *next;
+    struct process *next; //next process in chain
 } process;
 
 
@@ -31,14 +32,22 @@ int history_count = 0;
 int history_newest = 0;
 int history_oldest = 0;
 
-
-void addProcess(process** process_list_ptr, cmdLine* cmd, pid_t pid) {
-    process* new_proc = (process*)malloc(sizeof(process));
-    new_proc->cmd = cmd;
-    new_proc->pid = pid;
-    new_proc->status = RUNNING;
-    new_proc->next = *process_list_ptr;
-    *process_list_ptr = new_proc;
+//LAB C part3.a
+/*
+Create process list to the begining
+Receive a process list (process_list), a command (cmd), and the process id (pid) of the process running the command. 
+Note that process_list is a pointer to a pointer so that we can insert at the beginning of the list if we wish.
+//bc its passing the ponter as ref so its the copy of the actual memoery address,
+so if we only put one * we didnt really have the memoey in order to change the node address
+*/
+void addProcess(process** process_list, cmdLine* cmd, pid_t pid) {
+    process* newProc = (process*)malloc(sizeof(process));
+    newProc->cmd = cmd;
+    newProc->pid = pid;
+    newProc->status = RUNNING;
+    newProc->next = *process_list;
+    //this is the actual memory adressof the list we adding node to:
+    *process_list = newProc;
 }
 
 void updateProcessStatus(process* process_list_ptr, int pid, int status) {
@@ -52,31 +61,15 @@ void updateProcessStatus(process* process_list_ptr, int pid, int status) {
     }
 }
 
-void updateProcessList(process **process_list_ptr) {
-    process* curr = *process_list_ptr;
-    while (curr != NULL) {
-        int status;
-        pid_t res = waitpid(curr->pid, &status, WNOHANG | WUNTRACED | WCONTINUED);
-        if (res > 0) {
-            if (WIFSTOPPED(status)) {
-                curr->status = SUSPENDED;
-            } else if (WIFCONTINUED(status)) {
-                curr->status = RUNNING;
-            } else if (WIFEXITED(status) || WIFSIGNALED(status)) {
-                curr->status = TERMINATED;
-            }
-        } else if (res == -1) {
-            curr->status = TERMINATED;
-        }
-        curr = curr->next;
-    }
-}
+//print process list
 
-void printProcessList(process** process_list_ptr) {
-    updateProcessList(process_list_ptr);
+
+void printProcessList(process** process_list) {
+    //labc3b addition
+    updateProcessList(process_list);
+    //labc3a
     fprintf(stdout, "PID\t\tSTATUS\t\tCommand\n");
-    
-    process* curr = *process_list_ptr;
+    process* curr = *process_list;
     process* prev = NULL;
     
     while (curr != NULL) {
@@ -86,23 +79,25 @@ void printProcessList(process** process_list_ptr) {
         else if (curr->status == TERMINATED) status_str = "Terminated";
 
         fprintf(stdout, "%d\t\t%s\t\t", curr->pid, status_str);
-        
+        //print cmd name and args like sleep 5
         for (int i = 0; i < curr->cmd->argCount; i++) {
             fprintf(stdout, "%s ", curr->cmd->arguments[i]);
         }
         fprintf(stdout, "\n");
 
+        //LABC3b addition:
         if (curr->status == TERMINATED) {
             process* to_delete = curr;
             if (prev == NULL) {
-                *process_list_ptr = curr->next;
+                *process_list = curr->next;
             } else {
                 prev->next = curr->next;
             }
             curr = curr->next;
             freeCmdLines(to_delete->cmd);
             free(to_delete);
-        } else {
+        } 
+        else {
             prev = curr;
             curr = curr->next;
         }
@@ -413,7 +408,9 @@ int main(int argc, char **argv){
                 printHistory();
                 freeCmdLines(line);
             }
+            //part 3a labc
             else if (strcmp(commandName, "procs") == 0) {
+                //takes procces and make it ** ptr to ptr
                 printProcessList(&process_list);
                 freeCmdLines(line);
             }
